@@ -1,32 +1,29 @@
 name: CI
 
 on:
- push:
-  branches: [main]
+  push:
+    branches: [main]
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
 
- build:
+    steps:
+      - uses: actions/checkout@v4
 
-  runs-on: ubuntu-latest
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-  steps:
+      - run: npm install
+        working-directory: backend
 
-  - uses: actions/checkout@v4
+      - run: docker build -t todo-app .
 
-  - name: Setup Node
-    uses: actions/setup-node@v4
-    with:
-      node-version: 20
-
-  - run: npm install
-    working-directory: backend
-
-  - run: docker build -t todo-app .
-
-  - name: Scan Docker image
-  uses: aquasecurity/trivy-action@master
-  with:
-    image-ref: 'todo-app'
-    exit-code: '1'
-    severity: 'CRITICAL,HIGH'
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'todo-app'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
