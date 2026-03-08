@@ -24,6 +24,8 @@ jobs:
 
   - run: docker build -t todo-app .
   - name: Scan Docker image
+  
+  - name: Scan Docker image
   uses: aquasecurity/trivy-action@master
   with:
     image-ref: 'todo-app'
