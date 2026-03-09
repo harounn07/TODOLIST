@@ -1,39 +1,119 @@
-const API="http://localhost:3000";
+const API = 'http://localhost:3000';
+let currentFilter = 'all';
 
-async function loadTasks(){
-const res=await fetch(API+"/todos");
-const data=await res.json();
-
-const list=document.getElementById("list");
-list.innerHTML="";
-
-data.forEach(t=>{
-const li=document.createElement("li");
-li.innerHTML=t.task+" <button onclick='deleteTask("+t.id+")'>X</button>";
-list.appendChild(li);
-});
+// ── Fetch & render all tasks ──
+async function loadTasks() {
+  try {
+    const res = await fetch(`${API}/tasks`);
+    const tasks = await res.json();
+    renderTasks(tasks);
+  } catch {
+    renderTasks([]);
+  }
 }
 
-async function addTask(){
+function renderTasks(tasks) {
+  const list = document.getElementById('list');
+  const filtered = tasks.filter(t => {
+    if (currentFilter === 'active') return !t.done;
+    if (currentFilter === 'done')   return t.done;
+    return true;
+  });
 
-const task=document.getElementById("task").value;
+  list.innerHTML = '';
 
-await fetch(API+"/todos",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({task})
-});
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty">No tasks here 🎉</div>`;
+  } else {
+    filtered.forEach(t => {
+      const li = document.createElement('li');
+      if (t.done) li.classList.add('done');
 
-loadTasks();
+      li.innerHTML = `
+        <div class="check" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
+        <span class="task-text" onclick="toggleTask(${t.id})">${escapeHtml(t.title)}</span>
+        <button class="del" onclick="deleteTask(${t.id})" title="Delete">✕</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  // Update count
+  const remaining = tasks.filter(t => !t.done).length;
+  document.getElementById('count').textContent =
+    `${remaining} task${remaining !== 1 ? 's' : ''} remaining`;
 }
 
-async function deleteTask(id){
+// ── Add task ──
+async function addTask() {
+  const input = document.getElementById('task');
+  const title = input.value.trim();
+  if (!title) return;
 
-await fetch(API+"/todos/"+id,{
-method:"DELETE"
-});
-
-loadTasks();
+  try {
+    await fetch(`${API}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title })
+    });
+    input.value = '';
+    loadTasks();
+  } catch {
+    // Offline fallback: add locally
+    const list = document.getElementById('list');
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div class="check"></div>
+      <span class="task-text">${escapeHtml(title)}</span>
+      <button class="del" onclick="this.parentElement.remove()" title="Delete">✕</button>
+    `;
+    li.querySelector('.check').onclick = () => li.classList.toggle('done');
+    list.appendChild(li);
+    input.value = '';
+  }
 }
 
+// ── Toggle done ──
+async function toggleTask(id) {
+  try {
+    await fetch(`${API}/tasks/${id}/toggle`, { method: 'PATCH' });
+    loadTasks();
+  } catch {}
+}
+
+// ── Delete task ──
+async function deleteTask(id) {
+  try {
+    await fetch(`${API}/tasks/${id}`, { method: 'DELETE' });
+    loadTasks();
+  } catch {}
+}
+
+// ── Clear completed ──
+async function clearCompleted() {
+  try {
+    await fetch(`${API}/tasks/completed`, { method: 'DELETE' });
+    loadTasks();
+  } catch {}
+}
+
+// ── Filter ──
+function filterTasks(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadTasks();
+}
+
+// ── Enter key support ──
+document.getElementById('task').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+// ── Utility ──
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──
 loadTasks();
