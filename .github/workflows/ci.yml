@@ -19,7 +19,8 @@ jobs:
       - run: npm install
         working-directory: backend
 
-      - run: docker build -t todo-app .
+      - name: Build Docker image
+        run: docker build -t todo-app .
 
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
@@ -28,3 +29,30 @@ jobs:
           exit-code: '1'
           severity: 'CRITICAL,HIGH'
           skip-dirs: '/usr/local/lib/node_modules/npm'
+
+      - name: Notify Discord - Success
+        if: success()
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          embed-title: "✅ Deployment Succeeded"
+          embed-description: |
+            **Repo:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.event.head_commit.message }}
+            **By:** ${{ github.actor }}
+          embed-color: 3066993
+
+      - name: Notify Discord - Failure
+        if: failure()
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          embed-title: "❌ Deployment Failed"
+          embed-description: |
+            **Repo:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.event.head_commit.message }}
+            **By:** ${{ github.actor }}
+            [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          embed-color: 15158332
