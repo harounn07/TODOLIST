@@ -21,7 +21,7 @@ jobs:
         working-directory: backend
 
       - name: Build Docker image
-        run: docker build -t todo-app . --target nonexistent
+        run: docker build -t todo-app .
 
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
