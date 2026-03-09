@@ -16,7 +16,8 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm install
+      - name: Install dependencies
+        run: npm install
         working-directory: backend
 
       - name: Build Docker image
@@ -32,28 +33,34 @@ jobs:
 
       - name: Notify Discord - Success
         if: success()
-        uses: tsickert/discord-webhook@v6.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          embed-title: "✅ Deployment Succeeded"
-          embed-description: |
-            **Repo:** ${{ github.repository }}
-            **Branch:** ${{ github.ref_name }}
-            **Commit:** ${{ github.event.head_commit.message }}
-            **By:** ${{ github.actor }}
-          embed-color: 3066993
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [{
+              "title": "✅ Deployment Succeeded",
+              "description": "**Repo:** ${{ github.repository }}\n**Branch:** ${{ github.ref_name }}\n**Commit:** ${{ github.event.head_commit.message }}\n**By:** ${{ github.actor }}",
+              "color": 3066993,
+              "footer": { "text": "GitHub Actions" },
+              "timestamp": "${{ github.event.head_commit.timestamp }}"
+            }]
+          }' \
+          $DISCORD_WEBHOOK
 
       - name: Notify Discord - Failure
         if: failure()
-        uses: tsickert/discord-webhook@v6.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          embed-title: "❌ Deployment Faileed"
-          embed-description: |
-            **Repo:** ${{ github.repository }}
-            **Branch:** ${{ github.ref_name }}
-            **Commit:** ${{ github.event.head_commit.message }}
-            **By:** ${{ github.actor }}
-            [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-        sss
-          embed-color: 15158332
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [{
+              "title": "❌ Deployment Failed",
+              "description": "**Repo:** ${{ github.repository }}\n**Branch:** ${{ github.ref_name }}\n**Commit:** ${{ github.event.head_commit.message }}\n**By:** ${{ github.actor }}\n[View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 15158332,
+              "footer": { "text": "GitHub Actions" },
+              "timestamp": "${{ github.event.head_commit.timestamp }}"
+            }]
+          }' \
+          $DISCORD_WEBHOOK
